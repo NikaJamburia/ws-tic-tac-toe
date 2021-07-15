@@ -1,33 +1,74 @@
-import { GameData, GameState, MoveData, MoveValue } from "./game-data";
+import { GameData, GameView, MoveData, MoveValue } from "./game-data";
 import { GameMove } from "./game-move";
+import { GameStatus } from "./game-status";
+import { TTTGrid } from "./grid";
 
 export class Game {
 
-    private moves: Set<GameMove> = new Set()
+    private moves: GameMove[] = []
 
     constructor(
-        private readonly id: string,
+        public readonly id: string,
         public readonly playerX: string,
         public readonly playerO: string,
     ) {}
 
-    public makeAMove(move: GameMove): GameState {
-        console.log(`Making move on cell ${move.coordinateX}, ${move.coordinateY}`);
-        this.moves.add(move)
-        return this.state()
+    public makeAMove(move: GameMove): GameView {
+        this.validateMove(move)
+        this.moves.push(move)
+        return this.view()
+    }
+
+    public view(): GameView {
+        return {
+            forX: this.gameDataFor(this.playerX),
+            forO: this.gameDataFor(this.playerO)
+        }
+    }
+
+    private validateMove(move: GameMove) {
+
+        if (
+            !this.canMove(move.playerId)
+            || !this.cellIsFree(move)
+            || !this.coordinatesAreValid(move)
+        ) {
+            throw new Error("Invalid move!")
+        }
+    }
+
+    private coordinatesAreValid(move: GameMove): boolean {
+        return (move.coordinateX >= 1 && move.coordinateX <= 3)
+            && (move.coordinateY >= 1 && move.coordinateY <= 3)
     }
 
     private gameDataFor(player: string): GameData {
         return {
             id: this.id,
             moves: this.moveData(),
-            canMove: this.moves.size === 0 ? player === this.playerX : this.lastMove().playerId !== player,
-            won: false
+            canMove: this.canMove(player),
+            status: this.gameStatusFor(player)
         }
     }
 
+    private gameStatusFor(playerId: string): GameStatus {
+        let winner = this.winner()
+        if(winner) {
+            return winner === playerId ? GameStatus.WON : GameStatus.LOST
+        }
+        return this.moves.length < 9 ? GameStatus.IN_PROGRESS : GameStatus.DRAW
+    }
+
+    private winner(): string | undefined {
+        let winningCombo = new TTTGrid(this.moveData()).findWinningCombo()
+
+        return winningCombo 
+            ? winningCombo[0].value === MoveValue.X ? this.playerX : this.playerO
+            : undefined
+    }
+
     private moveData(): MoveData[] {
-        return Array.from(this.moves)
+        return this.moves
             .map(move => ({
                     coordinateX: move.coordinateX, 
                     coordinateY: move.coordinateY, 
@@ -36,15 +77,16 @@ export class Game {
             )
     }
 
-    private lastMove(): GameMove {
-        return Array.from(this.moves).pop()!;
+    private canMove(playerId: string): boolean {
+        return this.moves.length === 0 
+            ? playerId === this.playerX 
+            : this.moves[this.moves.length-1].playerId !== playerId
     }
 
-    public state(): GameState {
-        return {
-            forX: this.gameDataFor(this.playerX),
-            forO: this.gameDataFor(this.playerO)
-        }
+    private cellIsFree(move: GameMove): boolean {
+        return this.moves.find(m => 
+            m.coordinateX === move.coordinateX 
+                && m.coordinateY === move.coordinateY) === undefined
     }
     
 }

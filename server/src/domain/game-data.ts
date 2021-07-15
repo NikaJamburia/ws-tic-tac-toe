@@ -1,4 +1,6 @@
-export interface GameState {
+import { GameStatus } from "./game-status";
+
+export interface GameView {
     forX: GameData,
     forO: GameData
 }
@@ -7,7 +9,7 @@ export interface GameData {
     id: string,
     moves: MoveData[],
     canMove: boolean,
-    won: boolean
+    status: GameStatus
 }
 
 export interface MoveData {
