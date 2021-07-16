@@ -28,12 +28,20 @@ export class Game {
 
     private validateMove(move: GameMove) {
 
-        if (
-            !this.canMove(move.playerId)
-            || !this.cellIsFree(move)
-            || !this.coordinatesAreValid(move)
-        ) {
-            throw new Error("Invalid move!")
+        let error = ""
+
+        if(!this.canMove(move.playerId)) {
+            error += "Not your turn!"
+        }
+        if(!this.cellIsFree(move)) {
+            error += "Cell already filled!"
+        }
+        if(!this.coordinatesAreValid(move)) {
+            error += "Invalid cell coordinates!"
+        }
+
+        if(error !== "") {
+            throw new Error(error)
         }
     }
 
