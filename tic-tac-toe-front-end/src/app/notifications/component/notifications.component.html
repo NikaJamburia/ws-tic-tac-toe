@@ -1,0 +1,22 @@
+<ngb-toast class="mt-2"
+    *ngFor="let toast of notificationService.notificationToasts"
+    [class]="toast.cssClasses"
+    [autohide]="true"
+    [delay]="toast.dissapearAfter || 5000"
+    (hidden)="notificationService.remove(toast)"
+>
+    <div *ngIf="isTemplate(toast.content)">
+        <ng-template [ngTemplateOutlet]="asTemplate(toast.content)"></ng-template>
+    </div>
+
+    <div *ngIf="!isTemplate(toast.content)">
+        <ng-container *ngIf="asStandardContent(toast.content); let content">
+            <fa-icon 
+                *ngIf="content.icon" 
+                class="{{content.iconCssClasses}}" 
+                [icon]="content.icon!">
+            </fa-icon>
+            {{content.text}}
+        </ng-container>
+    </div>
+</ngb-toast>

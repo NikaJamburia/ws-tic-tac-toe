@@ -1,0 +1,8 @@
+<app-start-page 
+    *ngIf="!gameInProgress" 
+    (startGameEvent)="startGame()" 
+    (joinGameEvent)="joinGame()"
+></app-start-page>
+<app-game
+    *ngIf="gameInProgress" 
+></app-game>

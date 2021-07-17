@@ -5,7 +5,7 @@ import * as uuid from 'uuid';
 import { Game } from './domain/game';
 import { GameMessage, GameMessageType } from './messaging/game-message';
 import { MoveRequest } from './messaging/move-request';
-import { dataResponseJson, errorResponseJson } from './messaging/service-response';
+import { dataMsg, errorMsg, eventMsg, EventType, notificationMsg } from './messaging/msg-from-service';
 
 const app = express();
 const server = http.createServer(app);
@@ -19,14 +19,7 @@ wss.on('connection', (ws: PlayerWebSocket) => {
     initGame(ws)
 
     ws.on('close', (code: number, reason: string) => {        
-        conCount -= 1
-        if (game) {
-            let closedPlayerId = (ws as PlayerWebSocket).playerId
-            if (game.playerO === closedPlayerId || game.playerX === closedPlayerId) {                
-                game = undefined;
-                wss.clients.forEach(c => c.send("Opponent left"))
-            }
-        }
+        handleClose(ws);
     })
 
     ws.on('message', message => {
@@ -40,10 +33,10 @@ wss.on('connection', (ws: PlayerWebSocket) => {
                         let request = gameMessage.data as MoveRequest
                         let view = game.makeAMove( { coordinateX: request.coordinateX, coordinateY: request.coordinateY, playerId } )
                         
-                        getClientById(wss, game.playerX)?.send(dataResponseJson(view.forX))
-                        getClientById(wss, game.playerO)?.send(dataResponseJson(view.forO))
+                        getClientById(wss, game.playerX)?.send(dataMsg(view.forX))
+                        getClientById(wss, game.playerO)?.send(dataMsg(view.forO))
                     } catch(error) {
-                        ws.send(errorResponseJson(error.message))
+                        ws.send(errorMsg(error.message))
                     }
                     break;
                 case GameMessageType.RESTART:
@@ -52,14 +45,14 @@ wss.on('connection', (ws: PlayerWebSocket) => {
                     break;
             }
         } else {
-            ws.send("Game does not exist!")
+            ws.send(errorMsg("Game does not exist!"))
             ws.close(undefined, "Not found")
         }
     })
 })
 
 server.listen(3000, () => {
-    console.log(`Server started on port 3000 :)`);
+    console.log(`Server started on port 3000`);
 });
 
 declare class PlayerWebSocket extends WebSocket {
@@ -81,19 +74,30 @@ function initGame(ws: PlayerWebSocket) {
         game = new Game(uuid.v4(), client1.playerId, ws.playerId)
         let gameState = game.view()
 
-        client1.send(dataResponseJson(gameState.forX))
-        ws.send(dataResponseJson(gameState.forO))
+        ws.send(eventMsg(EventType.GAME_INITIATED, "Game found!"))
+        client1.send(dataMsg(gameState.forX))
+        ws.send(dataMsg(gameState.forO))
     }
 
     if(conCount < 2) {
-        ws.send("You are first. wait for opponent")
+        ws.send(eventMsg(EventType.GAME_INITIATED, "You are first. wait for opponent"))
     }
 
     if(conCount > 2) {
-        ws.send("Game in progress, wait for a while")
+        ws.send(eventMsg(EventType.GAME_OVER, "Game in progress, wait for a while"))
         ws.close(undefined, "Game in progress")
-        // conCount -= 1
     }
 
     console.log(game);
+}
+
+function handleClose(ws: PlayerWebSocket) {
+    conCount -= 1;
+    if (game) {
+        let closedPlayerId = (ws as PlayerWebSocket).playerId;
+        if (game.playerO === closedPlayerId || game.playerX === closedPlayerId) {
+            game = undefined;
+            wss.clients.forEach(c => c.send(notificationMsg("Opponent left")));
+        }
+    }
 }
