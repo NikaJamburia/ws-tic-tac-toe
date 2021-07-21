@@ -1,1 +1,29 @@
-<p>game works!</p>
+<h2 *ngIf="game === undefined || game?.status === gameStatus.IN_PROGRESS" class="my-4 text-center">
+    <ng-container *ngIf="game === undefined">Waiting for an opponent to join...</ng-container>
+    <ng-container *ngIf="game?.canMove">Your turn</ng-container>
+    <ng-container *ngIf="game?.canMove === false">Opponents turn</ng-container>
+</h2>
+
+<h2 *ngIf="game !== undefined && game?.status !== gameStatus.IN_PROGRESS" class="my-4 text-center">
+    <ng-container *ngIf="game?.status === gameStatus.WON"><span class="text-success"><b>You won!</b></span></ng-container>
+    <ng-container *ngIf="game?.status === gameStatus.LOST"><span class="text-danger"><b>You lost!</b></span></ng-container>
+    <ng-container *ngIf="game?.status === gameStatus.DRAW"><span class="text-primary"><b>Draw!</b></span></ng-container>
+</h2>
+
+<div class="d-flex align-items-center justify-content-center" >
+
+    <table>
+        <tr *ngFor="let x of gridCoordinates">
+            <td *ngFor="let y of gridCoordinates">
+                <div class="d-flex align-items-center justify-content-center w-100 h-100" #cellContent (click)="makeMove(x, y)">
+                    {{ decorateCell(cellContent, x, y) }}
+                </div>
+            </td>
+        </tr>
+    </table>
+
+</div>
+
+<div class="mt-5 w-100 text-center">
+    <button class="btn btn-secondary" (click)="quitGame()">Quit</button>
+</div>

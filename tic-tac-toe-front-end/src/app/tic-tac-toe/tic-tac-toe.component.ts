@@ -16,7 +16,7 @@ export class TicTacToeComponent implements OnInit, OnDestroy {
 
   gameSubscription$?: Subscription
 
-  constructor(private notificationService: NotificationService, private gameApi: GameApiService) { }
+  constructor(private notificationService: NotificationService, public gameApi: GameApiService) { }
 
   ngOnDestroy(): void {
     this.gameSubscription$?.unsubscribe()
@@ -30,6 +30,11 @@ export class TicTacToeComponent implements OnInit, OnDestroy {
 
     this.gameApi.startGame()
     this.gameSubscription$ = this.gameApi.messages
+      .pipe(tap(msg => {
+        if(msg.type === ServiceMsgType.ERROR) {
+          this.notificationService.showStandardError(msg.payload)
+        }
+      }))
       .pipe(filter(msg => msg.type === ServiceMsgType.EVENT))
       .subscribe(
         msg => {
@@ -43,16 +48,20 @@ export class TicTacToeComponent implements OnInit, OnDestroy {
             this.notificationService.showStandardInfo(msg.payload.message)
           }
         },
-        err => { this.gameInProgress = false },
-        () => { this.gameInProgress = false }
+        err => { this.quitGame() },
+        () => { this.quitGame() }
       )
         
-    
   }
 
   joinGame() {
     this.notificationService.showStandardInfo("Game Joined!")
     console.log("joined game");
+  }
+
+  quitGame() {
+    this.gameSubscription$?.unsubscribe()
+    this.gameInProgress = false;
   }
 
 }

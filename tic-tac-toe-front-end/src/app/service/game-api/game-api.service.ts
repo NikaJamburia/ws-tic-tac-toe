@@ -3,7 +3,7 @@ import { Observable, Subject } from 'rxjs';
 import { multicast, tap } from 'rxjs/operators';
 import { webSocket, WebSocketSubject } from "rxjs/webSocket";
 import { NotificationService } from 'src/app/notifications/service/notification.service';
-import { MsgFromService, ServiceMsgType } from './messages';
+import { GameMessage, GameMessageType, MsgFromService, ServiceMsgType } from './messages';
 
 @Injectable({
   providedIn: 'root'
@@ -11,10 +11,10 @@ import { MsgFromService, ServiceMsgType } from './messages';
 export class GameApiService {
 
   private GAME_SERVER_URL = "ws://localhost:3000/"
-  private socket?: WebSocketSubject<MsgFromService>
+  private socket?: WebSocketSubject<any>
   public messages: Observable<MsgFromService> = new Observable();
 
-  constructor(private notificationService: NotificationService) { }
+  constructor() { }
 
   startGame() {
       this.socket = webSocket({
@@ -24,17 +24,21 @@ export class GameApiService {
         }
       })
 
-      this.messages = this.socket
-        .pipe(multicast(this.socket))
-        .pipe(tap(msg => {          
-          if (msg.type === ServiceMsgType.ERROR) {
-            this.notificationService.showStandardError(msg.payload)
-          }
-        }))
+      this.messages = this.socket.pipe(multicast(this.socket))
   }
 
 
-
+  makeMove(x: number, y: number, gameId: string) {
+    let msg: GameMessage = {
+      type: GameMessageType.MAKE_MOVE,
+      gameId: gameId,
+      data: {
+        coordinateX: x,
+        coordinateY: y
+      }
+    }
+    this.socket?.next(msg)
+  }
 
 }
 

@@ -6,6 +6,7 @@ import { TTTGrid } from "./grid";
 export class Game {
 
     private moves: GameMove[] = []
+    private lastStatus: GameStatus = GameStatus.IN_PROGRESS
 
     constructor(
         public readonly id: string,
@@ -16,7 +17,9 @@ export class Game {
     public makeAMove(move: GameMove): GameView {
         this.validateMove(move)
         this.moves.push(move)
-        return this.view()
+        let view = this.view()
+        this.lastStatus = view.forX.status
+        return view
     }
 
     public view(): GameView {
@@ -30,6 +33,9 @@ export class Game {
 
         let error = ""
 
+        if(this.lastStatus !== GameStatus.IN_PROGRESS) {
+            error += "Game Finished!"
+        }
         if(!this.canMove(move.playerId)) {
             error += "Not your turn!"
         }

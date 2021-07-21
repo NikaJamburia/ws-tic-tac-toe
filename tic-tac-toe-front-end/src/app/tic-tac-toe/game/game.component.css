@@ -1,0 +1,15 @@
+table {
+    border-collapse: collapse;
+}
+
+td {
+    text-align: center !important;
+    width: 75px !important;
+    height: 75px !important;
+    font-weight: bold;
+    border: 1px solid black;
+}
+
+.clickable {
+    cursor: pointer;
+}

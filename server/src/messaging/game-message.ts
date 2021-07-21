@@ -9,3 +9,8 @@ export enum GameMessageType {
     QUIT = "QUIT",
     RESTART = "RESTART"
 }
+
+export interface MoveRequest {
+    coordinateX: number
+    coordinateY: number
+}

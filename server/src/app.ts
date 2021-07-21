@@ -4,7 +4,7 @@ import * as WebSocket from 'ws';
 import * as uuid from 'uuid';
 import { Game } from './domain/game';
 import { GameMessage, GameMessageType } from './messaging/game-message';
-import { MoveRequest } from './messaging/move-request';
+import { MoveRequest } from './messaging/game-message';
 import { dataMsg, errorMsg, eventMsg, EventType, notificationMsg } from './messaging/msg-from-service';
 
 const app = express();
@@ -97,7 +97,8 @@ function handleClose(ws: PlayerWebSocket) {
         let closedPlayerId = (ws as PlayerWebSocket).playerId;
         if (game.playerO === closedPlayerId || game.playerX === closedPlayerId) {
             game = undefined;
-            wss.clients.forEach(c => c.send(notificationMsg("Opponent left")));
+            wss.clients.forEach(c => c.send(eventMsg(EventType.GAME_OVER, "Opponent left")));
+            wss.clients.forEach(c => c.close())
         }
     }
 }
