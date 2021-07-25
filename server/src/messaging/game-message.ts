@@ -1,6 +1,5 @@
 export interface GameMessage {
     type: GameMessageType
-    gameId: string
     data: any
 }
 
@@ -11,6 +10,7 @@ export enum GameMessageType {
 }
 
 export interface MoveRequest {
+    gameId: string
     coordinateX: number
     coordinateY: number
 }

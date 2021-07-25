@@ -25,6 +25,9 @@ describe('tic-tac-toe game', () => {
 
         expect(gameView.forX.id).toEqual("1")
         expect(gameView.forO.id).toEqual("1")
+
+        expect(gameView.forX.playerId).toBe(NIKA)
+        expect(gameView.forO.playerId).toBe(BEQA)
     })
 
     it('should not let player whos turn didnt come to move', async () => {
@@ -122,5 +125,15 @@ describe('tic-tac-toe game', () => {
 
         expect(lastView.forX.status).toBe(GameStatus.WON)
         expect(lastView.forO.status).toBe(GameStatus.LOST)
+    })
+
+    it('should correctly identify opponents', async () => {
+        let game = new Game("1", NIKA, BEQA)
+
+        expect(game.opponentFor(NIKA)).toBe(BEQA)
+        expect(game.opponentFor(BEQA)).toBe(NIKA)
+        expect(() => {
+            game.opponentFor('vigaca')
+        }).toThrow('This game doesnt have given player!')
     })
 })

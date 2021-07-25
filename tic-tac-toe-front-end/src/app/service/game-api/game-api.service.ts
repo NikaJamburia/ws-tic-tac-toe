@@ -17,27 +17,35 @@ export class GameApiService {
   constructor() { }
 
   startGame() {
-      this.socket = webSocket({
-        url: this.GAME_SERVER_URL,
-        closeObserver: {
-          next: (event: CloseEvent) => { console.log(event) }
-        }
-      })
+    this.connect('NEW')
+  }
 
-      this.messages = this.socket.pipe(multicast(this.socket))
+  joinGame() {
+    this.connect('JOIN')
   }
 
 
   makeMove(x: number, y: number, gameId: string) {
     let msg: GameMessage = {
       type: GameMessageType.MAKE_MOVE,
-      gameId: gameId,
       data: {
+        gameId: gameId,
         coordinateX: x,
         coordinateY: y
       }
     }
     this.socket?.next(msg)
+  }
+
+  private connect(action: string) {
+    this.socket = webSocket({
+      url: this.GAME_SERVER_URL + `?action=${action}`,
+      closeObserver: {
+        next: (event: CloseEvent) => { console.log(event) }
+      }
+    })
+
+    this.messages = this.socket.pipe(multicast(this.socket))
   }
 
 }

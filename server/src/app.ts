@@ -2,52 +2,31 @@ import * as express from 'express';
 import * as http from 'http';
 import * as WebSocket from 'ws';
 import * as uuid from 'uuid';
-import { Game } from './domain/game';
+import * as url from 'url'
 import { GameMessage, GameMessageType } from './messaging/game-message';
 import { MoveRequest } from './messaging/game-message';
 import { dataMsg, errorMsg, eventMsg, EventType, notificationMsg } from './messaging/msg-from-service';
+import { TTTInMemoryRepository } from './repository/ttt-in-memory-repository';
+import { TTTGameService } from './service/ttt-game-service';
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-let conCount = 0
-let game: Game | undefined
+let gameRepository = new TTTInMemoryRepository()
+let gameService = new TTTGameService(gameRepository)
 
-wss.on('connection', (ws: PlayerWebSocket) => {
+wss.on('connection', (ws: PlayerWebSocket, request) => {
+
     ws.playerId = uuid.v4()
-    initGame(ws)
-
+    createOrJoinGame(request, ws);
+    
     ws.on('close', (code: number, reason: string) => {        
         handleClose(ws);
     })
 
     ws.on('message', message => {
-        let gameMessage = JSON.parse(message as string) as GameMessage
-        let playerId = (ws as PlayerWebSocket).playerId
-
-        if(game && game.id === gameMessage.gameId) {
-            switch(gameMessage.type) {
-                case GameMessageType.MAKE_MOVE:
-                    try {
-                        let request = gameMessage.data as MoveRequest
-                        let view = game.makeAMove( { coordinateX: request.coordinateX, coordinateY: request.coordinateY, playerId } )
-                        
-                        getClientById(wss, game.playerX)?.send(dataMsg(view.forX))
-                        getClientById(wss, game.playerO)?.send(dataMsg(view.forO))
-                    } catch(error) {
-                        ws.send(errorMsg(error.message))
-                    }
-                    break;
-                case GameMessageType.RESTART:
-                    break;
-                case GameMessageType.QUIT:
-                    break;
-            }
-        } else {
-            ws.send(errorMsg("Game does not exist!"))
-            ws.close(undefined, "Not found")
-        }
+        handleGameMessage(message, ws);
     })
 })
 
@@ -55,50 +34,89 @@ server.listen(3000, () => {
     console.log(`Server started on port 3000`);
 });
 
-declare class PlayerWebSocket extends WebSocket {
-    playerId: string
+function handleGameMessage(message: WebSocket.Data, ws: PlayerWebSocket) {
+
+    try {
+
+        let gameMessage = JSON.parse(message as string) as GameMessage;
+
+        switch (gameMessage.type) {
+            case GameMessageType.MAKE_MOVE:
+                let request = gameMessage.data as MoveRequest;
+                let gameView = gameService.makeMove(request, ws.playerId);
+                getClientById(wss, gameView.forX.playerId)?.send(dataMsg(gameView.forX));
+                getClientById(wss, gameView.forO.playerId)?.send(dataMsg(gameView.forO));
+                break;
+            case GameMessageType.RESTART:
+                break;
+            case GameMessageType.QUIT:
+                cancelInProgressGame(ws);
+                break;
+        }
+
+    } catch (error) {
+        ws.send(errorMsg(error.message));
+    }
+}
+
+function createOrJoinGame(request: http.IncomingMessage, ws: PlayerWebSocket) {
+    try {
+        switch (url.parse(request.url!, true).query.action) {
+            case 'NEW':
+                initGame(ws);
+                break;
+            case 'JOIN':
+                joinExistingGame(ws);
+                break;
+            case undefined:
+                closeWithError(ws, "Please provide action in query params. NEW or JOIN");
+                break;
+        }
+    } catch (e) {
+        closeWithError(ws, e.message)
+    }
+}
+
+function joinExistingGame(ws: PlayerWebSocket) {
+    let gameView = gameService.joinGame(ws.playerId);
+    let opponent = getClientById(wss, gameView.forX.playerId);
+
+    if (opponent) {
+        ws.send(eventMsg(EventType.GAME_INITIATED, "Game found! joining..."));
+        ws.send(dataMsg(gameView.forO));
+        opponent.send(dataMsg(gameView.forX));
+    } else {
+        closeWithError(ws, "Opponent left. Try joining another game!");
+    }
+}
+
+function initGame(ws: PlayerWebSocket) {
+    gameService.initiateGame(ws.playerId);
+    ws.send(eventMsg(EventType.GAME_INITIATED, "You are first. wait for opponent"));
 }
 
 function getClientById(server: WebSocket.Server, id: string): WebSocket | undefined {
     return Array.from(server.clients).find(c => (c as PlayerWebSocket).playerId === id)
 }
 
-function initGame(ws: PlayerWebSocket) {
-    conCount += 1
-
-    console.log(conCount);
-    
-
-    if(conCount === 2 && game === undefined) {
-        let client1 = Array.from(wss.clients)[0] as PlayerWebSocket
-        game = new Game(uuid.v4(), client1.playerId, ws.playerId)
-        let gameState = game.view()
-
-        ws.send(eventMsg(EventType.GAME_INITIATED, "Game found!"))
-        client1.send(dataMsg(gameState.forX))
-        ws.send(dataMsg(gameState.forO))
-    }
-
-    if(conCount < 2) {
-        ws.send(eventMsg(EventType.GAME_INITIATED, "You are first. wait for opponent"))
-    }
-
-    if(conCount > 2) {
-        ws.send(eventMsg(EventType.GAME_OVER, "Game in progress, wait for a while"))
-        ws.close(undefined, "Game in progress")
-    }
-
-    console.log(game);
+function closeWithError(client: PlayerWebSocket, msg: string) {
+    client.send(errorMsg(msg))
+    client.close()
 }
 
 function handleClose(ws: PlayerWebSocket) {
-    conCount -= 1;
-    if (game) {
-        let closedPlayerId = (ws as PlayerWebSocket).playerId;
-        if (game.playerO === closedPlayerId || game.playerX === closedPlayerId) {
-            game = undefined;
-            wss.clients.forEach(c => c.send(eventMsg(EventType.GAME_OVER, "Opponent left")));
-            wss.clients.forEach(c => c.close())
-        }
+    gameService.cancelWaitingGames(ws.playerId)
+    cancelInProgressGame(ws);
+}
+
+function cancelInProgressGame(ws: PlayerWebSocket) {
+    let opponentId = gameService.cancelGame(ws.playerId);
+    if (opponentId) {
+        getClientById(wss, opponentId)?.send(eventMsg(EventType.GAME_OVER, "Opponent left"));
     }
 }
+
+declare class PlayerWebSocket extends WebSocket {
+    playerId: string
+}
+

@@ -1,6 +1,5 @@
 export interface GameMessage {
     type: GameMessageType
-    gameId: string
     data: any
 }
 

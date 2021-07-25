@@ -7,6 +7,7 @@ export interface GameView {
 
 export interface GameData {
     id: string,
+    playerId: string
     moves: MoveData[],
     canMove: boolean,
     status: GameStatus

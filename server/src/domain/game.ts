@@ -59,6 +59,7 @@ export class Game {
     private gameDataFor(player: string): GameData {
         return {
             id: this.id,
+            playerId: player,
             moves: this.moveData(),
             canMove: this.canMove(player),
             status: this.gameStatusFor(player)
@@ -101,6 +102,16 @@ export class Game {
         return this.moves.find(m => 
             m.coordinateX === move.coordinateX 
                 && m.coordinateY === move.coordinateY) === undefined
+    }
+
+    opponentFor(playerId: string): string {
+        if(this.playerX === playerId) {
+            return this.playerO
+        }
+        if(this.playerO === playerId) {
+            return this.playerX
+        }
+        throw new Error("This game doesnt have given player!")
     }
     
 }

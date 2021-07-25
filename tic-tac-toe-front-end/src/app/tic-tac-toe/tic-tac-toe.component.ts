@@ -26,42 +26,44 @@ export class TicTacToeComponent implements OnInit, OnDestroy {
   }
 
   startGame() {
-    console.log("Game started");
-
     this.gameApi.startGame()
-    this.gameSubscription$ = this.gameApi.messages
-      .pipe(tap(msg => {
-        if(msg.type === ServiceMsgType.ERROR) {
-          this.notificationService.showStandardError(msg.payload)
-        }
-      }))
-      .pipe(filter(msg => msg.type === ServiceMsgType.EVENT))
-      .subscribe(
-        msg => {
-          if(msg.payload.eventType === EventType.GAME_INITIATED) {
-            this.gameInProgress = true
-          }
-          if(msg.payload.eventType === EventType.GAME_OVER) {
-            this.gameInProgress = false
-          }
-          if(msg.payload.message) {
-            this.notificationService.showStandardInfo(msg.payload.message)
-          }
-        },
-        err => { this.quitGame() },
-        () => { this.quitGame() }
-      )
+    this.subscribeToGame();
         
   }
 
   joinGame() {
-    this.notificationService.showStandardInfo("Game Joined!")
-    console.log("joined game");
+    this.gameApi.joinGame()
+    this.subscribeToGame();
   }
 
   quitGame() {
     this.gameSubscription$?.unsubscribe()
     this.gameInProgress = false;
+  }
+
+  private subscribeToGame() {
+    this.gameSubscription$ = this.gameApi.messages
+      .pipe(tap(msg => {
+        if (msg.type === ServiceMsgType.ERROR) {
+          this.notificationService.showStandardError(msg.payload);
+        }
+      }))
+      .pipe(filter(msg => msg.type === ServiceMsgType.EVENT))
+      .subscribe(
+        msg => {
+          if (msg.payload.eventType === EventType.GAME_INITIATED) {
+            this.gameInProgress = true;
+          }
+          if (msg.payload.eventType === EventType.GAME_OVER) {
+            this.quitGame()
+          }
+          if (msg.payload.message) {
+            this.notificationService.showStandardInfo(msg.payload.message);
+          }
+        },
+        err => { this.quitGame(); },
+        () => { this.quitGame(); }
+      );
   }
 
 }
