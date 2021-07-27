@@ -37,6 +37,18 @@ export class GameApiService {
     this.socket?.next(msg)
   }
 
+  sendMsgToOpponent(text: string, time: string, gameId: string) {
+    let msg: GameMessage = {
+      type: GameMessageType.MSG_TO_OPPONENT,
+      data: {
+        gameId: gameId,
+        sendTime: time,
+        text: text
+      }
+    }
+    this.socket?.next(msg)
+  }
+
   private connect(action: string) {
     this.socket = webSocket({
       url: this.GAME_SERVER_URL + `?action=${action}`,

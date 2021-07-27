@@ -5,9 +5,10 @@ import * as uuid from 'uuid';
 import * as url from 'url'
 import { GameMessage, GameMessageType } from './messaging/game-message';
 import { MoveRequest } from './messaging/game-message';
-import { dataMsg, errorMsg, eventMsg, EventType, notificationMsg } from './messaging/msg-from-service';
+import { dataMsg, DataType, errorMsg, eventMsg, EventType, notificationMsg } from './messaging/msg-from-service';
 import { TTTInMemoryRepository } from './repository/ttt-in-memory-repository';
 import { TTTGameService } from './service/ttt-game-service';
+import { SendMessageRequest } from './domain/send-message-request';
 
 const app = express();
 const server = http.createServer(app);
@@ -44,13 +45,18 @@ function handleGameMessage(message: WebSocket.Data, ws: PlayerWebSocket) {
             case GameMessageType.MAKE_MOVE:
                 let request = gameMessage.data as MoveRequest;
                 let gameView = gameService.makeMove(request, ws.playerId);
-                getClientById(wss, gameView.forX.playerId)?.send(dataMsg(gameView.forX));
-                getClientById(wss, gameView.forO.playerId)?.send(dataMsg(gameView.forO));
+                getClientById(wss, gameView.forX.playerId)?.send(dataMsg(gameView.forX, DataType.GAME_DATA));
+                getClientById(wss, gameView.forO.playerId)?.send(dataMsg(gameView.forO, DataType.GAME_DATA));
                 break;
             case GameMessageType.RESTART:
                 break;
             case GameMessageType.QUIT:
                 cancelInProgressGame(ws);
+                break;
+            case GameMessageType.MSG_TO_OPPONENT:
+                let msgRequest = gameMessage.data as SendMessageRequest
+                let receiverId = gameService.getMessageReceiver(ws.playerId, msgRequest.gameId)
+                getClientById(wss, receiverId)?.send(dataMsg({ sendTime: msgRequest.sendTime, text: msgRequest.text }, DataType.MSG_FROM_OPPONENT))
                 break;
         }
 
@@ -83,8 +89,8 @@ function joinExistingGame(ws: PlayerWebSocket) {
 
     if (opponent) {
         ws.send(eventMsg(EventType.GAME_INITIATED, "Game found! joining..."));
-        ws.send(dataMsg(gameView.forO));
-        opponent.send(dataMsg(gameView.forX));
+        ws.send(dataMsg(gameView.forO, DataType.GAME_DATA));
+        opponent.send(dataMsg(gameView.forX, DataType.GAME_DATA));
     } else {
         closeWithError(ws, "Opponent left. Try joining another game!");
     }

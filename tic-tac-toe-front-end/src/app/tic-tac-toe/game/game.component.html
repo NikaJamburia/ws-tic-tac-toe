@@ -27,3 +27,9 @@
 <div class="mt-5 w-100 text-center">
     <button class="btn btn-secondary" (click)="quitGame()">Quit</button>
 </div>
+
+<app-messaging
+    *ngIf="game !== undefined"
+    [gameService]="gameService"
+    [gameId]="game!.id"
+></app-messaging>

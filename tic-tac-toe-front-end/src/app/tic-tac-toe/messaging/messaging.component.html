@@ -1,0 +1,38 @@
+<div class="border position-absolute bottom-0 start-0 m-3" style="width: 300px;">
+
+    <div class="p-2 text-white bg-primary border-rounded d-flex align-items-center">
+        <b style="flex-grow: 1;">Messages</b>
+        <span *ngIf="newMsgs > 0" class="badge rounded-pill bg-danger me-2">{{ newMsgs }}</span>
+        <button *ngIf="!minimized" (click)="minimize()" class="btn btn-primary"><fa-icon [icon]="minimizeIcon"></fa-icon></button>
+        <button *ngIf="minimized" (click)="maximize()" class="btn btn-primary"><fa-icon [icon]="maximizeIcon"></fa-icon></button>
+        
+    </div>
+
+    <ng-container *ngIf="!minimized">
+        <div class="p-3 overflow-auto" style="height: 300px;">
+            <ng-container *ngFor="let msg of messages">
+                <div *ngIf="msg.type === 'outgoing'" style="max-width: 250px;" class="mt-3 d-flex align-items-center justify-content-start">
+                    <div class="bg-primary p-2 text-white rounded me-2" style="word-wrap: break-word;max-width: 75%;">{{msg.text}}</div>
+                    <small class="text-secondary">{{msg.time}}</small>
+                </div>
+        
+                <div *ngIf="msg.type === 'incoming'" class="mt-3 d-flex align-items-center justify-content-end">
+                    <small class="text-secondary">{{msg.time}}</small>
+                    <div class="bg-secondary p-2 text-white rounded ms-2" style="word-wrap: break-word;;max-width: 75%;">{{msg.text}}</div>
+                </div>
+            </ng-container>
+        </div>
+    
+        <form class="form" onsubmit="return false" [formGroup]="sendMsgForm">
+        
+            <div class="d-flex align-items-stretch" style="height: max-content;">
+                <textarea class="form-control" rows="2" required formControlName="newMsgText" style="resize: none;"></textarea>
+                <button type="button" class="btn btn-primary" [disabled]="sendMsgForm.invalid" (click)="sendMsg()">
+                    <fa-icon [icon]="sendIcon"></fa-icon>
+                </button>
+            </div>
+        
+        </form>
+    </ng-container>
+
+</div>

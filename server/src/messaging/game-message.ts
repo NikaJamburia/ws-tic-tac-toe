@@ -6,7 +6,8 @@ export interface GameMessage {
 export enum GameMessageType {
     MAKE_MOVE = "MAKE_MOVE",
     QUIT = "QUIT",
-    RESTART = "RESTART"
+    RESTART = "RESTART",
+    MSG_TO_OPPONENT="MSG_TO_OPPONENT"
 }
 
 export interface MoveRequest {

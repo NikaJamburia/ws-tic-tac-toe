@@ -3,7 +3,7 @@ import { Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { GameData, GameStatus, MoveData, MoveValue } from 'src/app/service/game-api/data';
 import { GameApiService } from 'src/app/service/game-api/game-api.service';
-import { EventType, ServiceMsgType } from 'src/app/service/game-api/messages';
+import { DataType, EventType, ServiceMsgType } from 'src/app/service/game-api/messages';
 
 @Component({
   selector: 'app-game',
@@ -28,7 +28,7 @@ export class GameComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.gameSubscription$ = this.gameService.messages
-    .pipe(filter(msg => msg.type === ServiceMsgType.DATA))
+    .pipe(filter(msg => msg.type === ServiceMsgType.DATA && msg.dataType === DataType.GAME_DATA ))
     .subscribe(
       msg => {
         this.game = msg.payload as GameData

@@ -9,6 +9,8 @@ import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { NotificationsComponent } from './notifications/component/notifications.component';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { GameComponent } from './tic-tac-toe/game/game.component';
+import { MessagingComponent } from './tic-tac-toe/messaging/messaging.component';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 @NgModule({
   declarations: [
@@ -16,13 +18,16 @@ import { GameComponent } from './tic-tac-toe/game/game.component';
     StartPageComponent,
     TicTacToeComponent,
     NotificationsComponent,
-    GameComponent
+    GameComponent,
+    MessagingComponent
   ],
   imports: [
     BrowserModule,
     AppRoutingModule,
     NgbModule,
     FontAwesomeModule,
+    FormsModule,
+    ReactiveFormsModule
   ],
   providers: [],
   bootstrap: [AppComponent]

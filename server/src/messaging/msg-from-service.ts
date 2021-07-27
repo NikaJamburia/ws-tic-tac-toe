@@ -15,9 +15,15 @@ export enum EventType {
     GAME_OVER = "GAME_OVER"
 }
 
-export function dataMsg(dataPayload: any): string {
+export enum DataType {
+    GAME_DATA = "GAME_DATA",
+    MSG_FROM_OPPONENT = "MSG_FROM_OPPONENT",
+}
+
+export function dataMsg(dataPayload: any, dataType: DataType): string {
     return JSON.stringify({
         type: ServiceMsgType.DATA,
+        dataType: dataType,
         payload: dataPayload
     })
 }

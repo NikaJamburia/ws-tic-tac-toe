@@ -4,6 +4,7 @@ import { WaitingGame } from "../domain/waiting-game";
 import { MoveRequest } from "../messaging/game-message";
 import { TTTRepository } from "../repository/ttt-repository";
 import * as uuid from 'uuid';
+import { SendMessageRequest } from "../domain/send-message-request";
 
 export class TTTGameService {
 
@@ -52,6 +53,16 @@ export class TTTGameService {
 
     cancelWaitingGames(playerId: string): void {
         this.gameRepository.removeWaitingGamesForPlayer(playerId)
+    }
+
+    getMessageReceiver(senderId: string, gameId: string): string {
+        let game = this.gameRepository.getGameById(gameId)
+
+        if(game) {
+            return game.opponentFor(senderId)
+        } else {
+            throw new Error("Game not found!")
+        }
     }
 
 }
