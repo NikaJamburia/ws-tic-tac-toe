@@ -4,6 +4,7 @@ import { NotificationService } from '../notifications/service/notification.servi
 import { GameApiService } from '../service/game-api/game-api.service';
 import { filter, tap } from 'rxjs/operators';
 import { EventType, ServiceMsgType } from '../service/game-api/messages';
+import { P2PRequestReceivedMsg } from '../service/game-api/data';
 
 @Component({
   selector: 'app-tic-tac-toe',
@@ -16,6 +17,8 @@ export class TicTacToeComponent implements OnInit, OnDestroy {
 
   gameSubscription$?: Subscription
 
+  currentPlayerId = ""
+
   constructor(private notificationService: NotificationService, public gameApi: GameApiService) { }
 
   ngOnDestroy(): void {
@@ -27,8 +30,7 @@ export class TicTacToeComponent implements OnInit, OnDestroy {
 
   startGame() {
     this.gameApi.startGame()
-    this.subscribeToGame();
-        
+    this.subscribeToGame();  
   }
 
   joinGame() {
@@ -51,19 +53,46 @@ export class TicTacToeComponent implements OnInit, OnDestroy {
       .pipe(filter(msg => msg.type === ServiceMsgType.EVENT))
       .subscribe(
         msg => {
-          if (msg.payload.eventType === EventType.GAME_INITIATED) {
-            this.gameInProgress = true;
-          }
-          if (msg.payload.eventType === EventType.GAME_OVER) {
-            this.quitGame()
-          }
-          if (msg.payload.message) {
-            this.notificationService.showStandardInfo(msg.payload.message);
+          if(msg.payload.eventType === EventType.REQUEST_RECEIVED) {
+            this.showReceivedRequest(msg.payload.additionalData as P2PRequestReceivedMsg)
+          } else {
+            if (msg.payload.eventType === EventType.GAME_INITIATED) {
+              this.gameInProgress = true;
+            }
+            if (msg.payload.eventType === EventType.GAME_OVER) {
+              this.quitGame()
+            }
+            if (msg.payload.additionalData) {
+              this.notificationService.showStandardInfo(msg.payload.additionalData);
+            }
           }
         },
         err => { this.quitGame(); },
         () => { this.quitGame(); }
       );
+  }
+
+  private showReceivedRequest(request: P2PRequestReceivedMsg) {
+    this.notificationService.showStandardInfoWithOptions(request.text, [
+      {
+        color: "success",
+        text: request.approveText,
+        onClick: () => {
+          this.gameApi.answerToRequest("APPROVE_REQUEST", request.requestId, this.currentPlayerId)
+        }
+      }, 
+      {
+        color: "secondary",
+        text: request.rejectText,
+        onClick: () => {
+          this.gameApi.answerToRequest("REJECT_REQUEST", request.requestId, this.currentPlayerId)
+        }
+      }
+    ])
+  }
+
+  setPlayerId(id: string) {
+    this.currentPlayerId = id
   }
 
 }

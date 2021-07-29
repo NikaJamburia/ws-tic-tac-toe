@@ -7,4 +7,5 @@
     *ngIf="gameInProgress" 
     [gameService]="gameApi"
     (quit)="quitGame()"
+    (newPlayerIdReceived)="setPlayerId($event)"
 ></app-game>

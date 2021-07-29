@@ -7,7 +7,9 @@ export enum GameMessageType {
     MAKE_MOVE = "MAKE_MOVE",
     QUIT = "QUIT",
     RESTART = "RESTART",
-    MSG_TO_OPPONENT="MSG_TO_OPPONENT"
+    PLAY_AGAIN = "PLAY_AGAIN",
+    MSG_TO_OPPONENT = "MSG_TO_OPPONENT",
+    ANSWER_TO_P2P_REQUEST = "ANSWER_TO_P2P_REQUEST",
 }
 
 export enum DataType {
@@ -30,5 +32,8 @@ export enum ServiceMsgType {
 
 export enum EventType {
     GAME_INITIATED = "GAME_INITIATED",
-    GAME_OVER = "GAME_OVER"
+    GAME_OVER = "GAME_OVER",
+    REQUEST_RECEIVED = "REQUEST_RECEIVED",
+    REQUEST_APPROVED = "REQUEST_APPROVED",
+    REQUEST_REJECTED = "REQUEST_REJECTED",
 }

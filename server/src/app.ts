@@ -2,32 +2,44 @@ import * as express from 'express';
 import * as http from 'http';
 import * as WebSocket from 'ws';
 import * as uuid from 'uuid';
-import * as url from 'url'
-import { GameMessage, GameMessageType } from './messaging/game-message';
-import { MoveRequest } from './messaging/game-message';
-import { dataMsg, DataType, errorMsg, eventMsg, EventType, notificationMsg } from './messaging/msg-from-service';
+import { IncomingMessage, IncomingMessageType } from './messaging/incoming-message';
+import {errorMsg} from './messaging/outgoing-message';
 import { TTTInMemoryRepository } from './repository/ttt-in-memory-repository';
 import { TTTGameService } from './service/ttt-game-service';
-import { SendMessageRequest } from './domain/send-message-request';
+import { IncomingMsgHandler } from './messaging/handler/incoming-msg-handler';
+import { MakeMovehandler } from './messaging/handler/make-move-handler';
+import { QuitGameHandler } from './messaging/handler/quit-game-handler';
+import { RestartGametHandler } from './messaging/handler/restart-game-handler';
+import { PlayAgainHandler } from './messaging/handler/play-again-handler';
+import { MsgToOpponentHandler } from './messaging/handler/msg-to-opponent-handler';
+import { P2PRequestInMemoryRepository } from './repository/p2p-request-in-memory-repository';
+import { P2PRequestService } from './service/p2p-request-service';
+import { AnswerToP2PRequestHandler } from './messaging/handler/answer-to-p2p-request';
+import { createOrJoinGame } from './on-connection';
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
+let p2pRequestRepository = new P2PRequestInMemoryRepository()
 let gameRepository = new TTTInMemoryRepository()
+
+let p2pRequestService = new P2PRequestService(p2pRequestRepository)
 let gameService = new TTTGameService(gameRepository)
+
+const incomingMsgHandlers: Map<IncomingMessageType, IncomingMsgHandler> = registerIncomingMsgHandlers()
 
 wss.on('connection', (ws: PlayerWebSocket, request) => {
 
     ws.playerId = uuid.v4()
-    createOrJoinGame(request, ws);
+    createOrJoinGame(request, ws, wss, gameService);
     
     ws.on('close', (code: number, reason: string) => {        
-        handleClose(ws);
+        incomingMsgHandlers.get(IncomingMessageType.QUIT)?.handle({ type: IncomingMessageType.QUIT, data: {} }, ws)
     })
 
     ws.on('message', message => {
-        handleGameMessage(message, ws);
+        handleIncomingMessage(message, ws);
     })
 })
 
@@ -35,94 +47,34 @@ server.listen(3000, () => {
     console.log(`Server started on port 3000`);
 });
 
-function handleGameMessage(message: WebSocket.Data, ws: PlayerWebSocket) {
+function handleIncomingMessage(message: WebSocket.Data, ws: PlayerWebSocket) {
 
     try {
-
-        let gameMessage = JSON.parse(message as string) as GameMessage;
-
-        switch (gameMessage.type) {
-            case GameMessageType.MAKE_MOVE:
-                let request = gameMessage.data as MoveRequest;
-                let gameView = gameService.makeMove(request, ws.playerId);
-                getClientById(wss, gameView.forX.playerId)?.send(dataMsg(gameView.forX, DataType.GAME_DATA));
-                getClientById(wss, gameView.forO.playerId)?.send(dataMsg(gameView.forO, DataType.GAME_DATA));
-                break;
-            case GameMessageType.RESTART:
-                break;
-            case GameMessageType.QUIT:
-                cancelInProgressGame(ws);
-                break;
-            case GameMessageType.MSG_TO_OPPONENT:
-                let msgRequest = gameMessage.data as SendMessageRequest
-                let receiverId = gameService.getMessageReceiver(ws.playerId, msgRequest.gameId)
-                getClientById(wss, receiverId)?.send(dataMsg({ sendTime: msgRequest.sendTime, text: msgRequest.text }, DataType.MSG_FROM_OPPONENT))
-                break;
+        let incomingMessage = JSON.parse(message as string) as IncomingMessage;
+        let msgHandler = incomingMsgHandlers.get(incomingMessage.type)
+        
+        if(msgHandler) {
+            msgHandler.handle(incomingMessage, ws)
+        } else {
+            throw new Error("Message not recognized!")
         }
-
     } catch (error) {
         ws.send(errorMsg(error.message));
     }
 }
 
-function createOrJoinGame(request: http.IncomingMessage, ws: PlayerWebSocket) {
-    try {
-        switch (url.parse(request.url!, true).query.action) {
-            case 'NEW':
-                initGame(ws);
-                break;
-            case 'JOIN':
-                joinExistingGame(ws);
-                break;
-            case undefined:
-                closeWithError(ws, "Please provide action in query params. NEW or JOIN");
-                break;
-        }
-    } catch (e) {
-        closeWithError(ws, e.message)
-    }
+function registerIncomingMsgHandlers(): Map<IncomingMessageType, IncomingMsgHandler> {
+    let handlersMap = new Map()
+    handlersMap.set(IncomingMessageType.MAKE_MOVE, new MakeMovehandler(wss, gameService)),
+    handlersMap.set(IncomingMessageType.QUIT, new QuitGameHandler(wss, gameService)),
+    handlersMap.set(IncomingMessageType.RESTART, new RestartGametHandler(wss, p2pRequestService, gameService)),
+    handlersMap.set(IncomingMessageType.PLAY_AGAIN, new PlayAgainHandler(wss, p2pRequestService, gameService)),
+    handlersMap.set(IncomingMessageType.MSG_TO_OPPONENT, new MsgToOpponentHandler(wss, gameService)),
+    handlersMap.set(IncomingMessageType.ANSWER_TO_P2P_REQUEST, new AnswerToP2PRequestHandler(wss, p2pRequestService));
+    return handlersMap
 }
 
-function joinExistingGame(ws: PlayerWebSocket) {
-    let gameView = gameService.joinGame(ws.playerId);
-    let opponent = getClientById(wss, gameView.forX.playerId);
-
-    if (opponent) {
-        ws.send(eventMsg(EventType.GAME_INITIATED, "Game found! joining..."));
-        ws.send(dataMsg(gameView.forO, DataType.GAME_DATA));
-        opponent.send(dataMsg(gameView.forX, DataType.GAME_DATA));
-    } else {
-        closeWithError(ws, "Opponent left. Try joining another game!");
-    }
-}
-
-function initGame(ws: PlayerWebSocket) {
-    gameService.initiateGame(ws.playerId);
-    ws.send(eventMsg(EventType.GAME_INITIATED, "You are first. wait for opponent"));
-}
-
-function getClientById(server: WebSocket.Server, id: string): WebSocket | undefined {
-    return Array.from(server.clients).find(c => (c as PlayerWebSocket).playerId === id)
-}
-
-function closeWithError(client: PlayerWebSocket, msg: string) {
-    client.send(errorMsg(msg))
-    client.close()
-}
-
-function handleClose(ws: PlayerWebSocket) {
-    gameService.cancelWaitingGames(ws.playerId)
-    cancelInProgressGame(ws);
-}
-
-function cancelInProgressGame(ws: PlayerWebSocket) {
-    let opponentId = gameService.cancelGame(ws.playerId);
-    if (opponentId) {
-        getClientById(wss, opponentId)?.send(eventMsg(EventType.GAME_OVER, "Opponent left"));
-    }
-}
-
-declare class PlayerWebSocket extends WebSocket {
+export declare class PlayerWebSocket extends WebSocket {
     playerId: string
 }
 

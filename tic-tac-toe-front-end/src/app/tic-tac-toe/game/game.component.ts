@@ -3,7 +3,7 @@ import { Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { GameData, GameStatus, MoveData, MoveValue } from 'src/app/service/game-api/data';
 import { GameApiService } from 'src/app/service/game-api/game-api.service';
-import { DataType, EventType, ServiceMsgType } from 'src/app/service/game-api/messages';
+import { DataType, EventType, MsgFromService, ServiceMsgType } from 'src/app/service/game-api/messages';
 
 @Component({
   selector: 'app-game',
@@ -14,6 +14,7 @@ export class GameComponent implements OnInit, OnDestroy {
 
   @Input() gameService!: GameApiService
   @Output() quit = new EventEmitter()
+  @Output() newPlayerIdReceived = new EventEmitter()
 
   gameSubscription$?: Subscription
   game?: GameData
@@ -31,10 +32,10 @@ export class GameComponent implements OnInit, OnDestroy {
     .pipe(filter(msg => msg.type === ServiceMsgType.DATA && msg.dataType === DataType.GAME_DATA ))
     .subscribe(
       msg => {
-        this.game = msg.payload as GameData
-      },
-      err => {  },
-      () => {  }
+        let game = msg.payload as GameData
+        this.game = game
+        this.newPlayerIdReceived.emit(game.playerId)
+      }
     )
   }
 
@@ -64,6 +65,12 @@ export class GameComponent implements OnInit, OnDestroy {
 
   quitGame() {
     this.quit.emit()
+  }
+
+  restartGame() {
+    if(this.game) {
+      this.gameService.restartGame(this.game.id)
+    }
   }
 
 }

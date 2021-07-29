@@ -17,10 +17,11 @@ export class P2PRequestService {
         return request.requestId
     }
 
-    public approveRequest(requestId: string, approverId: string) {
+    public approveRequest(requestId: string, approverId: string): string {
         let request = this.requireRequest(requestId, approverId)
         request.onApprove()
         this.removeRequest(requestId)
+        return request.senderId
     }
 
     public rejectRequest(requestId: string, rejecterId: string): string {

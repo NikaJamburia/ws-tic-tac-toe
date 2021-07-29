@@ -60,6 +60,26 @@ export class GameApiService {
     this.messages = this.socket.pipe(multicast(this.socket))
   }
 
+  answerToRequest(type: "APPROVE_REQUEST" | "REJECT_REQUEST", requestId: string, userId: string) {
+    let msg: GameMessage = {
+      type: GameMessageType.ANSWER_TO_P2P_REQUEST,
+      data: {
+        requestId: requestId,
+        userId: userId,
+        interactionType: type,
+      }
+    }
+
+    this.socket?.next(msg)
+  }
+
+  restartGame(gameId: string) {
+    this.socket?.next({
+      type: GameMessageType.RESTART,
+      data: { gameId: gameId }
+    })
+  }
+
 }
 
 

@@ -29,4 +29,8 @@ export class NotificationsComponent implements OnInit {
     return content as ToastStantardContent
   }
 
+  clearNotifications() {
+    this.notificationService.notificationToasts = []
+  }
+
 }

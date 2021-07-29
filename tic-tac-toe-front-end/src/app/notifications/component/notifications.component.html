@@ -17,6 +17,16 @@
                 [icon]="content.icon!">
             </fa-icon>
             {{content.text}}
+
         </ng-container>
+    </div>
+
+    <div class="d-flex" *ngIf="toast.buttons" class="mt-2">
+        <button 
+            *ngFor="let btn of toast.buttons" 
+            class="btn btn-sm btn-{{btn.color}} me-2" 
+            (click)="btn.onClick(); clearNotifications()"
+            >{{btn.text}}
+        </button>
     </div>
 </ngb-toast>

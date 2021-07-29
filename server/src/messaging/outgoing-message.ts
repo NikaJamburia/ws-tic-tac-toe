@@ -1,9 +1,9 @@
-export interface MsgFromService {
-    type: ServiceMsgType
+export interface OutgoingMessage {
+    type: OutgoingMsgType
     payload: any
 }
 
-export enum ServiceMsgType {
+export enum OutgoingMsgType {
     NOTIFICATION = "NOTIFICATION",
     ERROR = "ERROR",
     DATA = "DATA",
@@ -12,7 +12,10 @@ export enum ServiceMsgType {
 
 export enum EventType {
     GAME_INITIATED = "GAME_INITIATED",
-    GAME_OVER = "GAME_OVER"
+    GAME_OVER = "GAME_OVER",
+    REQUEST_RECEIVED = "REQUEST_RECEIVED",
+    REQUEST_APPROVED = "REQUEST_APPROVED",
+    REQUEST_REJECTED = "REQUEST_REJECTED",
 }
 
 export enum DataType {
@@ -22,7 +25,7 @@ export enum DataType {
 
 export function dataMsg(dataPayload: any, dataType: DataType): string {
     return JSON.stringify({
-        type: ServiceMsgType.DATA,
+        type: OutgoingMsgType.DATA,
         dataType: dataType,
         payload: dataPayload
     })
@@ -30,21 +33,21 @@ export function dataMsg(dataPayload: any, dataType: DataType): string {
 
 export function errorMsg(errorMsg: string): string {
     return JSON.stringify({
-        type: ServiceMsgType.ERROR,
+        type: OutgoingMsgType.ERROR,
         payload: errorMsg
     })
 }
 
 export function notificationMsg(msg: string): string {
     return JSON.stringify({
-        type: ServiceMsgType.NOTIFICATION,
+        type: OutgoingMsgType.NOTIFICATION,
         payload: msg
     })
 }
 
-export function eventMsg(type: EventType, message: string | undefined) {
+export function eventMsg(type: EventType, additionalData: any | undefined) {
     return JSON.stringify({
-        type: ServiceMsgType.EVENT,
-        payload: { eventType: type, message: message }
+        type: OutgoingMsgType.EVENT,
+        payload: { eventType: type, additionalData: additionalData }
     })
 }

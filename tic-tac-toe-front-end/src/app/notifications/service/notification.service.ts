@@ -1,6 +1,6 @@
 import { Injectable, TemplateRef } from '@angular/core';
 import { faCheckCircle, faExclamationCircle, faInfoCircle } from '@fortawesome/free-solid-svg-icons';
-import { NotificationToast } from './notification-toast';
+import { NotificationToast, NotificationToastButton } from './notification-toast';
 
 @Injectable({
   providedIn: 'root'
@@ -28,7 +28,8 @@ export class NotificationService {
         icon: faCheckCircle,
         iconCssClasses: "text-success"
       },
-      dissapearAfter: 3000
+      dissapearAfter: 3000,
+      buttons: []
     })
   }
 
@@ -40,7 +41,8 @@ export class NotificationService {
         icon: faExclamationCircle,
         iconCssClasses: "text-danger"
       },
-      dissapearAfter: 5000
+      dissapearAfter: 5000,
+      buttons: []
     })
   }
 
@@ -52,7 +54,21 @@ export class NotificationService {
         icon: faInfoCircle,
         iconCssClasses: "text-primary"
       },
-      dissapearAfter: 5000
+      dissapearAfter: 5000,
+      buttons: []
+    })
+  }
+
+  showStandardInfoWithOptions(text: string, buttons: NotificationToastButton[]) {
+    this.notificationToasts.push ({
+      cssClasses: "bg-light highlighted",
+      content: {
+        text: text,
+        icon: faInfoCircle,
+        iconCssClasses: "text-primary"
+      },
+      dissapearAfter: 1000000000,
+      buttons: buttons
     })
   }
 

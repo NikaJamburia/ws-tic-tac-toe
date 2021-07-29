@@ -24,3 +24,10 @@ export enum GameStatus {
     CANCELED = "CANCELED",
     DRAW = "DRAW",
 }
+
+export interface P2PRequestReceivedMsg {
+    requestId: string,
+    text: string,
+    approveText: string,
+    rejectText: string
+}

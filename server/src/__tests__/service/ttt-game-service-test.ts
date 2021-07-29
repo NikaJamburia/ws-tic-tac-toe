@@ -72,4 +72,18 @@ describe('tic-tac-toe game service', () => {
         expect(opponentId).toBe("player2")
         expect(repository.getGameById('game1')).toBeUndefined()
     })
+
+    it('restarts game', async () => {
+        let repository = new TTTInMemoryRepository()
+        repository.addGame(new Game('game1', 'player1', 'player2'))
+        let service = new TTTGameService(repository)
+
+        let restartedGame = service.restartGame('game1')
+
+        expect(restartedGame.forX.id === 'game1').toBeFalsy()
+        expect(restartedGame.forX.moves.length).toBe(0)
+        expect(restartedGame.forX.canMove).toBeTruthy()
+        expect(restartedGame.forO.canMove).toBeFalsy()
+        expect(repository.getGameById('game1')).toBeUndefined()
+    })
 })

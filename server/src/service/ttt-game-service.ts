@@ -1,10 +1,10 @@
 import { Game } from "../domain/game";
 import { GameView, MoveData } from "../domain/game-data";
 import { WaitingGame } from "../domain/waiting-game";
-import { MoveRequest } from "../messaging/game-message";
+import { MoveRequest } from "../messaging/incoming-message";
 import { TTTRepository } from "../repository/ttt-repository";
 import * as uuid from 'uuid';
-import { SendMessageRequest } from "../domain/send-message-request";
+import { SendMessageRequest } from "../messaging/send-message-request";
 
 export class TTTGameService {
 
@@ -55,11 +55,39 @@ export class TTTGameService {
         this.gameRepository.removeWaitingGamesForPlayer(playerId)
     }
 
-    getMessageReceiver(senderId: string, gameId: string): string {
+    getOpponentFor(playerId: string, gameId: string): string {
         let game = this.gameRepository.getGameById(gameId)
 
         if(game) {
-            return game.opponentFor(senderId)
+            return game.opponentFor(playerId)
+        } else {
+            throw new Error("Game not found!")
+        }
+    }
+
+    restartGame(gameid: string): GameView {
+        let game = this.gameRepository.getGameById(gameid)
+
+        if(game) {
+            this.gameRepository.removeGamesForPlayer(game.playerX)
+            let newGame = new Game(uuid.v4(), game.playerX, game.playerO)
+            this.gameRepository.addGame(newGame)
+            return newGame.view()
+
+        } else {
+            throw new Error("Game not found!")
+        }
+    }
+
+    playAgain(gameid: string): GameView {
+        let game = this.gameRepository.getGameById(gameid)
+
+        if(game) {
+            this.gameRepository.removeGamesForPlayer(game.playerX)
+            let newGame = new Game(uuid.v4(), game.playerO, game.playerX)
+            this.gameRepository.addGame(newGame)
+            return newGame.view()
+
         } else {
             throw new Error("Game not found!")
         }
