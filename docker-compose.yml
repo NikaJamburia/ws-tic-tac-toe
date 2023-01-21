@@ -1,0 +1,11 @@
+version: "3"
+
+services:
+  server:
+    build: ./server/
+    ports:
+    - "3000:3000"
+  web:
+    build: ./tic-tac-toe-front-end/
+    ports:
+    - "80:4200"
